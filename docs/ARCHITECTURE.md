@@ -22,7 +22,7 @@
                               ↓
                     ┌─────────────────┐
                     │  Backend API    │
-                    │  (Node.js/REST) │
+                    │  (Springboot/REST) │
                     └─────────────────┘
 ```
 
