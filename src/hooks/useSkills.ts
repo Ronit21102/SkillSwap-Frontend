@@ -2,10 +2,9 @@
  * useSkills.ts — React Query hooks for all skills-related data fetching
  *
  * Hooks:
- *  • useAllSkills()      — fetches the full skill catalogue (GET /skills)
- *  • useMySkills()       — fetches the current user's skills (GET /users/me/skills)
- *  • useAddUserSkill()   — mutation: POST /users/me/skills
- *  • useRemoveUserSkill() — mutation: DELETE /users/me/skills/:id
+ *  • useAllSkills()    — fetches the full skill catalogue (GET /api/skills)
+ *  • useMySkills()     — fetches the current user's skills (GET /api/users/me/skills)
+ *  • useAddUserSkill() — mutation: POST /api/users/me/skills
  */
 
 import {
@@ -19,13 +18,11 @@ import {
   fetchAllSkills,
   fetchMySkills,
   addUserSkill,
-  removeUserSkill,
 } from '@/lib/skillsApi'
 import type {
   Skill,
-  UserSkill,
+  UserSkills,
   AddUserSkillInput,
-  RemoveUserSkillInput,
 } from '@/types/skills'
 
 // ── Query key constants ───────────────────────────────────────────────────────
@@ -37,7 +34,7 @@ export const skillsKeys = {
 // ── useAllSkills ──────────────────────────────────────────────────────────────
 
 /**
- * Fetches the full catalogue of skills from GET /skills.
+ * Fetches the full catalogue of skills from GET /api/skills.
  * Cached for 10 minutes — skill list changes infrequently.
  */
 export function useAllSkills(): UseQueryResult<Skill[], Error> {
@@ -51,9 +48,10 @@ export function useAllSkills(): UseQueryResult<Skill[], Error> {
 // ── useMySkills ───────────────────────────────────────────────────────────────
 
 /**
- * Fetches the authenticated user's linked skills from GET /users/me/skills.
+ * Fetches the authenticated user's skills from GET /api/users/me/skills.
+ * Returns { teach: string[], learn: string[] }
  */
-export function useMySkills(): UseQueryResult<UserSkill[], Error> {
+export function useMySkills(): UseQueryResult<UserSkills, Error> {
   return useQuery({
     queryKey: skillsKeys.mine,
     queryFn:  fetchMySkills,
@@ -63,29 +61,13 @@ export function useMySkills(): UseQueryResult<UserSkill[], Error> {
 // ── useAddUserSkill ───────────────────────────────────────────────────────────
 
 /**
- * Mutation: POST /users/me/skills
- * Optimistically invalidates the user's skills list after success.
+ * Mutation: POST /api/users/me/skills
+ * Invalidates the user's skills list after success so it re-fetches.
  */
-export function useAddUserSkill(): UseMutationResult<UserSkill, Error, AddUserSkillInput> {
+export function useAddUserSkill(): UseMutationResult<void, Error, AddUserSkillInput> {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: addUserSkill,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: skillsKeys.mine })
-    },
-  })
-}
-
-// ── useRemoveUserSkill ────────────────────────────────────────────────────────
-
-/**
- * Mutation: DELETE /users/me/skills/:skillId
- * Optimistically invalidates the user's skills list after success.
- */
-export function useRemoveUserSkill(): UseMutationResult<void, Error, RemoveUserSkillInput> {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: removeUserSkill,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: skillsKeys.mine })
     },

@@ -8,9 +8,8 @@
 import { api, getApiError } from '@/lib/api'
 import type {
   Skill,
-  UserSkill,
+  UserSkills,
   AddUserSkillInput,
-  RemoveUserSkillInput,
   SkillsListResponse,
   UserSkillsResponse,
   AddUserSkillResponse,
@@ -19,7 +18,7 @@ import type {
 // ── Fetch all available skills ────────────────────────────────────────────────
 
 /**
- * GET /skills
+ * GET /api/skills
  * Returns the full catalogue of skills available on the platform.
  */
 export async function fetchAllSkills(): Promise<Skill[]> {
@@ -34,10 +33,11 @@ export async function fetchAllSkills(): Promise<Skill[]> {
 // ── Fetch the current user's skills ──────────────────────────────────────────
 
 /**
- * GET /users/me/skills
- * Returns the authenticated user's linked skills (teach + learn).
+ * GET /api/users/me/skills
+ * Returns the authenticated user's linked skills grouped by type.
+ * Shape: { teach: string[], learn: string[] }
  */
-export async function fetchMySkills(): Promise<UserSkill[]> {
+export async function fetchMySkills(): Promise<UserSkills> {
   try {
     const { data } = await api.get<UserSkillsResponse>('/users/me/skills')
     return data.data
@@ -49,29 +49,13 @@ export async function fetchMySkills(): Promise<UserSkill[]> {
 // ── Add a skill to the current user ──────────────────────────────────────────
 
 /**
- * POST /users/me/skills
+ * POST /api/users/me/skills
  * Links a skill (with a TEACH or LEARN type) to the authenticated user.
+ * The backend returns data: null on success — only success/message matter.
  */
-export async function addUserSkill(input: AddUserSkillInput): Promise<UserSkill> {
+export async function addUserSkill(input: AddUserSkillInput): Promise<void> {
   try {
-    const { data } = await api.post<AddUserSkillResponse>('/users/me/skills', input)
-    return data.data
-  } catch (err) {
-    throw new Error(getApiError(err))
-  }
-}
-
-// ── Remove a skill from the current user ─────────────────────────────────────
-
-/**
- * DELETE /users/me/skills/:skillId?type=TEACH|LEARN
- * Unlinks a skill from the authenticated user.
- */
-export async function removeUserSkill(input: RemoveUserSkillInput): Promise<void> {
-  try {
-    await api.delete(`/users/me/skills/${input.skillId}`, {
-      params: { type: input.type },
-    })
+    await api.post<AddUserSkillResponse>('/users/me/skills', input)
   } catch (err) {
     throw new Error(getApiError(err))
   }

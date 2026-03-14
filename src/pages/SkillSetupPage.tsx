@@ -13,7 +13,6 @@
  *  • Toast-style error banner
  */
 
-import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -22,8 +21,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { SkillSelector } from '@/components/skills/SkillSelector'
-import { useAllSkills, useAddUserSkill, useRemoveUserSkill } from '@/hooks/useSkills'
-import type { Skill } from '@/types/skills'
+import { useAllSkills } from '@/hooks/useSkills'
+import { useSkillSetup } from '@/hooks/useSkillSetup'
 
 // ─── Variants for section card entrance ──────────────────────────────────────
 
@@ -105,100 +104,33 @@ export default function SkillSetupPage() {
 
   // ── Remote data ────────────────────────────────────────────────────────────
   const { data: allSkills = [], isLoading: skillsLoading } = useAllSkills()
-  const addMutation    = useAddUserSkill()
-  const removeMutation = useRemoveUserSkill()
 
-  // ── Local selected state (mirrors server after each mutation) ──────────────
-  const [teachSkills, setTeachSkills] = useState<Skill[]>([])
-  const [learnSkills, setLearnSkills] = useState<Skill[]>([])
+  // ── Consolidated skill setup state and handlers ─────────────────────────────
+  const {
+    teachSkills,
+    learnSkills,
+    removingTeachId,
+    removingLearnId,
+    error,
+    isSaving,
+    saveSuccess,
+    handleAddTeach,
+    handleAddLearn,
+    handleRemoveTeach,
+    handleRemoveLearn,
+    handleSave: handleSkillSetupSave,
+    totalSelected,
+    canSkip,
+  } = useSkillSetup()
 
-  // IDs currently being removed (to show spinner on tag)
-  const [removingTeachId, setRemovingTeachId] = useState<string | null>(null)
-  const [removingLearnId, setRemovingLearnId] = useState<string | null>(null)
-
-  // ── Inline errors ──────────────────────────────────────────────────────────
-  const [error, setError] = useState<string | null>(null)
-
-  // ── Save state ────────────────────────────────────────────────────────────
-  const [isSaving, setIsSaving] = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
-
-  // ── Add handlers ──────────────────────────────────────────────────────────
-  const handleAddTeach = useCallback(async (skill: Skill) => {
-    // Optimistic update
-    setTeachSkills((prev) => [...prev, skill])
-    setError(null)
-    try {
-      await addMutation.mutateAsync({ skillId: skill.id, type: 'TEACH' })
-    } catch (err) {
-      setTeachSkills((prev) => prev.filter((s) => s.id !== skill.id))
-      setError((err as Error).message)
-    }
-  }, [addMutation])
-
-  const handleAddLearn = useCallback(async (skill: Skill) => {
-    setLearnSkills((prev) => [...prev, skill])
-    setError(null)
-    try {
-      await addMutation.mutateAsync({ skillId: skill.id, type: 'LEARN' })
-    } catch (err) {
-      setLearnSkills((prev) => prev.filter((s) => s.id !== skill.id))
-      setError((err as Error).message)
-    }
-  }, [addMutation])
-
-  // ── Remove handlers ────────────────────────────────────────────────────────
-  const handleRemoveTeach = useCallback(async (skill: Skill) => {
-    setRemovingTeachId(skill.id)
-    setError(null)
-    try {
-      await removeMutation.mutateAsync({ skillId: skill.id, type: 'TEACH' })
-      setTeachSkills((prev) => prev.filter((s) => s.id !== skill.id))
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setRemovingTeachId(null)
-    }
-  }, [removeMutation])
-
-  const handleRemoveLearn = useCallback(async (skill: Skill) => {
-    setRemovingLearnId(skill.id)
-    setError(null)
-    try {
-      await removeMutation.mutateAsync({ skillId: skill.id, type: 'LEARN' })
-      setLearnSkills((prev) => prev.filter((s) => s.id !== skill.id))
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setRemovingLearnId(null)
-    }
-  }, [removeMutation])
-
-  // ── Save / continue ────────────────────────────────────────────────────────
-  async function handleSave() {
-    if (teachSkills.length === 0 && learnSkills.length === 0) {
-      setError('Please add at least one skill before continuing.')
-      return
-    }
-    setIsSaving(true)
-    setSaveSuccess(false)
-    setError(null)
-
-    // Short success flash, then navigate
-    try {
-      setSaveSuccess(true)
-      await new Promise((r) => setTimeout(r, 700))
+  // ── Handle save with navigation ──────────────────────────────────────────────
+  const handleSave = async () => {
+    await handleSkillSetupSave()
+    // Navigate after successful save
+    if (!error) {
       navigate('/dashboard')
-    } catch {
-      setError('Could not save. Please try again.')
-    } finally {
-      setIsSaving(false)
     }
   }
-
-  // ── Derived ────────────────────────────────────────────────────────────────
-  const totalSelected = teachSkills.length + learnSkills.length
-  const canSkip = true
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (

@@ -166,6 +166,14 @@ export const useAuthStore = create<AuthStore>()(
         accessToken: s.accessToken,
         isAuthenticated: s.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Once localStorage has been read, we know the real auth state.
+        // Set isInitializing: false so ProtectedRoute doesn't fire a
+        // needless refresh when a valid session is already in localStorage.
+        if (state) {
+          state.isInitializing = false
+        }
+      },
     }
   )
 )

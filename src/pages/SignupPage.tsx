@@ -2,64 +2,13 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/cn'
-
-/* ── Validation schema ──────────────────────────────────── */
-const signupSchema = z.object({
-  name: z
-    .string()
-    .min(2, 'Name must be at least 2 characters')
-    .max(60, 'Name is too long'),
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Enter a valid email'),
-  password: z
-    .string()
-    .min(8, 'At least 8 characters')
-    .regex(/[A-Z]/, 'Include at least one uppercase letter')
-    .regex(/[0-9]/, 'Include at least one number'),
-  confirmPassword: z.string().min(1, 'Please confirm your password'),
-}).refine((d) => d.password === d.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-})
-
-type SignupFormValues = z.infer<typeof signupSchema>
-
-/* ── Password strength indicator ───────────────────────── */
-function getStrength(password: string): { score: number; label: string; color: string } {
-  let score = 0
-  if (password.length >= 8)           score++
-  if (/[A-Z]/.test(password))         score++
-  if (/[0-9]/.test(password))         score++
-  if (/[^A-Za-z0-9]/.test(password))  score++
-
-  const map = [
-    { label: '',       color: 'bg-white/10' },
-    { label: 'Weak',   color: 'bg-red-500'     },
-    { label: 'Fair',   color: 'bg-yellow-500'  },
-    { label: 'Good',   color: 'bg-emerald-400' },
-    { label: 'Strong', color: 'bg-emerald-500' },
-  ]
-  return { score, ...map[score] }
-}
-
-/* ── Reusable dark input class builder ─────────────────── */
-function inputCls(hasError: boolean) {
-  return cn(
-    'w-full h-11 rounded-xl border bg-white/5 px-4 text-sm text-white',
-    'placeholder:text-white/25 outline-none transition-all',
-    'focus:bg-white/8 focus:ring-2',
-    hasError
-      ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
-      : 'border-white/10 focus:border-emerald-500/60 focus:ring-emerald-500/20'
-  )
-}
+import { signupSchema, type SignupFormValues } from '@/lib/validation/signupSchema'
+import { getPasswordStrength } from '@/lib/passwordStrength'
+import { inputCls } from '@/lib/inputStyles'
 
 /* ── Component ──────────────────────────────────────────── */
 export default function SignupPage() {
@@ -76,12 +25,12 @@ export default function SignupPage() {
   } = useForm<SignupFormValues>({ resolver: zodResolver(signupSchema) })
 
   const passwordValue = watch('password', '')
-  const strength      = getStrength(passwordValue)
+  const strength      = getPasswordStrength(passwordValue)
 
   const onSubmit = async (values: SignupFormValues) => {
     try {
       await signup({ name: values.name, email: values.email, password: values.password })
-      navigate('/onboarding', { replace: true })
+      navigate('/skills/setup', { replace: true })
     } catch {
       // error already in store
     }

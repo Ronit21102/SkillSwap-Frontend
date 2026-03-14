@@ -25,12 +25,11 @@ export function ProtectedRoute() {
   const location = useLocation()
 
   useEffect(() => {
-    // Only attempt a silent refresh if we don't already have a confirmed session
+    // Only attempt a silent refresh when:
+    // 1. We are still initializing (first boot)
+    // 2. AND the user is not already authenticated from persisted storage
     if (isInitializing && !isAuthenticated) {
       refreshSession()
-    } else if (isInitializing) {
-      // Already authenticated (token was in localStorage) — no refresh needed
-      useAuthStore.setState({ isInitializing: false })
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
